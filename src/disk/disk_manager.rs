@@ -143,6 +143,10 @@ impl DiskManagerHandle {
         }
     }
 
+    pub fn get_disk_manager(&self) -> Arc<DiskManager> {
+        self.disk_manager.clone()
+    }
+
     // Retrieves the thread-local `io_uring` instance.
     pub fn get_uring(&self) -> IoUringAsync {
         self.uring.clone()

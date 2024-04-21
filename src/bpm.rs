@@ -1,8 +1,5 @@
 use crate::{
-    disk::{
-        disk_manager::{DiskManager, DiskManagerHandle},
-        frame::Frame,
-    },
+    disk::{disk_manager::DiskManager, frame::Frame},
     page::{
         eviction::{Temperature, TemperatureState},
         Page, PageHandle, PageId, PageRef, PAGE_SIZE,
@@ -166,8 +163,8 @@ impl BufferPoolManager {
     }
 
     // Creates a thread-local [`DiskManagerHandle`] to the inner [`DiskManager`].
-    pub fn get_disk_manager(&self) -> DiskManagerHandle {
-        self.disk_manager.create_handle()
+    pub fn get_disk_manager(&self) -> Arc<DiskManager> {
+        self.disk_manager.clone()
     }
 
     /// Continuously runs the eviction algorithm in a loop.
@@ -224,8 +221,9 @@ impl BufferPoolManager {
     }
 
     pub fn build_thread_runtime(self: &Arc<Self>) -> Runtime {
-        let dmh = self.get_disk_manager();
-        let uring = Rc::new(dmh.get_uring());
+        let dm = self.get_disk_manager();
+
+        let uring = Rc::new(dm.create_handle().get_uring());
         let uring_daemon = SendWrapper::new(uring.clone());
 
         Builder::new_current_thread()
