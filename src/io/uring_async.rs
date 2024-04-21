@@ -167,7 +167,7 @@ impl IoUringAsync {
         }
     }
 
-    pub fn register_buffers(&self, buffers: &[IoSlice<'static>]) {
+    pub fn register_buffers(&self, buffers: &'static [IoSlice<'static>]) {
         let ptr = buffers.as_ptr() as *const iovec;
 
         // Safety: Since the pointer came from a valid slice, and since `IoSliceMut` is ABI

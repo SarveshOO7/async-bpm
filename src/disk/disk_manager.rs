@@ -25,7 +25,7 @@ pub struct DiskManager {
     ///
     /// For safety purposes, we cannot ever read from any of these slices, as we should only be
     /// accessing the inner data through [`Frame`]s.
-    register_buffers: Box<[IoSlice<'static>]>,
+    register_buffers: &'static [IoSlice<'static>],
 
     /// Thread-local `IoUringAsync` instances.
     io_urings: ThreadLocal<SendWrapper<IoUringAsync>>,
@@ -36,7 +36,7 @@ pub struct DiskManager {
 
 impl DiskManager {
     /// Creates a new shared [`DiskManager`] instance.
-    pub fn new(capacity: usize, file_name: String, io_slices: Box<[IoSlice<'static>]>) -> Self {
+    pub fn new(capacity: usize, file_name: String, io_slices: &'static [IoSlice<'static>]) -> Self {
         let file = OpenOptions::new()
             .create(true)
             .read(true)
@@ -80,7 +80,7 @@ impl DiskManager {
         let uring = IoUringAsync::try_default().expect("Unable to create an `IoUring` instance");
 
         // TODO this doesn't work yet
-        // uring.register_buffers(&self.register_buffers);
+        // uring.register_buffers(self.register_buffers);
 
         // Install and return the new thread-local `IoUringAsync` instance
         self.io_urings

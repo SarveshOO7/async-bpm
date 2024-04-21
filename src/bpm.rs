@@ -66,7 +66,7 @@ impl BufferPoolManager {
 
         // Create the registerable buffers, as well as create the owned `Frame`s and send them down
         // the channel for future `Page`s to take ownership of
-        let register_buffers = slices
+        let register_buffers: &'static [IoSlice<'static>] = slices
             .into_iter()
             .map(|buf| {
                 // Safety: Since we never actually read from the buffer pointers (intended for being
@@ -88,7 +88,7 @@ impl BufferPoolManager {
                 IoSlice::new(register_slice)
             })
             .collect::<Vec<IoSlice<'static>>>()
-            .into_boxed_slice();
+            .leak();
 
         let disk_manager = Arc::new(DiskManager::new(
             capacity,
