@@ -10,7 +10,9 @@ use tokio::{runtime::Builder, task::LocalSet};
 #[test]
 fn test_new_disk_manager() {
     let bpm = Arc::new(BufferPoolManager::new(4, 4));
-    let dmh = bpm.get_disk_manager();
+    let dm = bpm.get_disk_manager();
+
+    let dmh = dm.create_handle();
     let uring = Rc::new(dmh.get_uring());
 
     let pid0 = PageId::new(0);
