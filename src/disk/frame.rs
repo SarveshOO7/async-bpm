@@ -13,15 +13,19 @@ pub struct Frame {
     /// the inner [`IoSliceMut`].
     pub(crate) buf: IoSliceMut<'static>,
 
+    /// The index of this frame with respect to the base
+    pub(crate) index: u16,
+
     /// A reference to the page that owns this [`Frame`], if an owner actually exists
     pub(crate) owner: Option<PageRef>,
 }
 
 impl Frame {
     /// Creates a new and owned [`Frame`] given a static [`IoSliceMut`].
-    pub fn new(ioslice: IoSliceMut<'static>) -> Self {
+    pub fn new(ioslice: IoSliceMut<'static>, index: u16) -> Self {
         Self {
             buf: ioslice,
+            index,
             owner: None,
         }
     }

@@ -40,7 +40,8 @@ pub struct BufferPoolManager {
     pub(crate) active_pages: Mutex<HashSet<PageId>>,
 
     /// A channel of free, owned buffer [`Frame`]s.
-    pub(crate) free_frames: (Sender<Frame>, Receiver<Frame>),
+    /// TODO make pub(crate)
+    pub free_frames: (Sender<Frame>, Receiver<Frame>),
 
     /// The manager of reading and writing [`Page`] data via [`Frame`]s.
     pub(crate) disk_manager: Arc<DiskManager>,
@@ -68,24 +69,29 @@ impl BufferPoolManager {
         // the channel for future `Page`s to take ownership of
         let register_buffers: &'static [IoSlice<'static>] = slices
             .into_iter()
-            .map(|buf| {
-                // Safety: Since we never actually read from the buffer pointers (intended for being
+            .enumerate()
+            .map(|(i, buf)| {
+                // Safety: Since we never actually read from the register_buffers (intended for being
                 // registered in an `io_uring` instance), it is safe to have a shared slice
                 // reference exist at the same time as the exclusive mutable slice reference that is
                 // being stored through the `IoSliceMut` and `Frame`.
-                let register_slice = unsafe { slice::from_raw_parts(buf.as_ptr(), PAGE_SIZE) };
+                let register_slice: &mut [u8] =
+                    unsafe { slice::from_raw_parts_mut(buf.as_ptr() as *mut u8, PAGE_SIZE) };
 
-                {
-                    // Create the owned `Frame`
-                    let owned_buf = IoSliceMut::new(buf);
-                    let frame = Frame::new(owned_buf);
+                let owned_buf = IoSliceMut::new(register_slice);
 
-                    // Add the `Frame` to the channel of free frames
-                    tx.send_blocking(frame)
-                        .expect("Was unable to send the initial frames onto the global free list");
-                }
+                // Create the owned `Frame`
+                let frame = Frame::new(
+                    owned_buf,
+                    i.try_into()
+                        .expect("The slice of buffers has too many buffers {i}"),
+                );
 
-                IoSlice::new(register_slice)
+                // Add the `Frame` to the channel of free frames
+                tx.send_blocking(frame)
+                    .expect("Was unable to send the initial frames onto the global free list");
+
+                IoSlice::new(buf)
             })
             .collect::<Vec<IoSlice<'static>>>()
             .leak();

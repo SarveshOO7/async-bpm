@@ -6,6 +6,7 @@ use crate::{
 use io_uring::{opcode, types::Fd};
 use libc::O_DIRECT;
 use send_wrapper::SendWrapper;
+use tracing::trace;
 use std::{
     fs::{File, OpenOptions},
     io::IoSlice,
@@ -25,7 +26,8 @@ pub struct DiskManager {
     ///
     /// For safety purposes, we cannot ever read from any of these slices, as we should only be
     /// accessing the inner data through [`Frame`]s.
-    register_buffers: &'static [IoSlice<'static>],
+    /// TODO remove pub
+    pub register_buffers: &'static [IoSlice<'static>],
 
     /// Thread-local `IoUringAsync` instances.
     io_urings: ThreadLocal<SendWrapper<IoUringAsync>>,
@@ -80,7 +82,7 @@ impl DiskManager {
         let uring = IoUringAsync::try_default().expect("Unable to create an `IoUring` instance");
 
         // TODO this doesn't work yet
-        // uring.register_buffers(self.register_buffers);
+        uring.register_buffers(self.register_buffers);
 
         // Install and return the new thread-local `IoUringAsync` instance
         self.io_urings
@@ -135,6 +137,32 @@ impl DiskManagerHandle {
         // Safety: Since this function owns the `Frame`, we can guarantee that the buffer the
         // `Frame` owns will be valid for the entire duration of this operation
         let cqe = unsafe { self.uring.push(entry).await };
+
+        if cqe.result() >= 0 {
+            Ok(frame)
+        } else {
+            Err(frame)
+        }
+    }
+
+    /// Writes a page's data on a [`Frame`] to disk, where the [`Frame`] has been pre-registered.
+    pub async fn write_from_fixed(&self, pid: PageId, frame: Frame) -> Result<Frame, Frame> {
+        let fd = Fd(self.disk_manager.file.as_raw_fd());
+
+        let buf_ptr = frame.buf.as_ptr();
+
+        let entry = opcode::WriteFixed::new(fd, buf_ptr, PAGE_SIZE as u32, frame.index)
+            .offset(pid.offset())
+            .build()
+            .user_data(pid.as_u64());
+
+        trace!("Pushing WriteFixed operation entry now");
+
+        // Safety: Since this function owns the `Frame`, we can guarantee that the buffer the
+        // `Frame` owns will be valid for the entire duration of this operation
+        let cqe = unsafe { self.uring.push(entry).await };
+
+        trace!("WriteFixed operation finished");
 
         if cqe.result() >= 0 {
             Ok(frame)
