@@ -6,7 +6,6 @@ use crate::{
 use io_uring::{opcode, types::Fd};
 use libc::O_DIRECT;
 use send_wrapper::SendWrapper;
-use tracing::trace;
 use std::{
     fs::{File, OpenOptions},
     io::IoSlice,
@@ -15,6 +14,7 @@ use std::{
     sync::Arc,
 };
 use thread_local::ThreadLocal;
+use tracing::trace;
 
 /// Manages reads into and writes from [`Frame`]s between memory and disk.
 #[derive(Debug)]
@@ -165,8 +165,13 @@ impl DiskManagerHandle {
         trace!("WriteFixed operation finished");
 
         if cqe.result() >= 0 {
+            tracing::info!("WriteFixed operation succeeded");
             Ok(frame)
         } else {
+            tracing::warn!(
+                "WriteFixed operation failed with error code {}",
+                cqe.result()
+            );
             Err(frame)
         }
     }

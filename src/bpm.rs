@@ -40,8 +40,7 @@ pub struct BufferPoolManager {
     pub(crate) active_pages: Mutex<HashSet<PageId>>,
 
     /// A channel of free, owned buffer [`Frame`]s.
-    /// TODO make pub(crate)
-    pub free_frames: (Sender<Frame>, Receiver<Frame>),
+    pub(crate) free_frames: (Sender<Frame>, Receiver<Frame>),
 
     /// The manager of reading and writing [`Page`] data via [`Frame`]s.
     pub(crate) disk_manager: Arc<DiskManager>,
@@ -243,5 +242,9 @@ impl BufferPoolManager {
             .enable_all()
             .build()
             .unwrap()
+    }
+
+    pub fn free_frames(&self) -> (Sender<Frame>, Receiver<Frame>) {
+        self.free_frames.clone()
     }
 }
