@@ -103,7 +103,7 @@ fn test_register_threads() {
 
                 let local = LocalSet::new();
                 local.spawn_local(async move {
-                    let (tx, rx) = bpm_clone.free_frames.clone();
+                    let (tx, rx) = bpm_clone.free_frames();
 
                     trace!("Getting free frame");
 
