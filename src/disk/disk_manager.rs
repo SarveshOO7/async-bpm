@@ -82,7 +82,7 @@ impl DiskManager {
         let uring = IoUringAsync::try_default().expect("Unable to create an `IoUring` instance");
 
         // TODO this doesn't work yet
-        uring.register_buffers(self.register_buffers);
+        // uring.register_buffers(self.register_buffers);
 
         // Install and return the new thread-local `IoUringAsync` instance
         self.io_urings
